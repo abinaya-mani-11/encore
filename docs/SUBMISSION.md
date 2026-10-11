@@ -1,12 +1,12 @@
 # Submission notes
 
-**Name:** Recall
-**Pitch:** Tell Alexa+ what you studied today. Recall turns it into flashcards and quizzes you by voice on a spaced schedule, picking up where you left off every session.
+**Name:** Encore
+**Pitch:** Tell Alexa+ what you studied today. Encore turns it into flashcards and quizzes you by voice on a spaced schedule, picking up where you left off every session.
 **Problem:** Students forget most of what they hear within days, and nobody has time to turn notes into review material.
 **Track:** Alexa+ (simulated Alexa+ experience + self-hosted MCP server). **Mini challenges:** AWS Builder, Open Source.
 
 ## Demo video script (under 3:00, best part first)
-- 0:00-0:20 Problem, then "Recall: a voice study coach for Alexa+"
+- 0:00-0:20 Problem, then "Encore: a voice study coach for Alexa+"
 - 0:20-1:00 Speak your notes, flashcards get created (Bedrock)
 - 1:00-2:00 Voice quiz: question, spoken answer, graded, next card
 - 2:00-2:30 Next session: progress and schedule persisted

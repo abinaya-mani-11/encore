@@ -1,4 +1,4 @@
-# Recall
+# Encore
 
 A voice study coach for Alexa+. Tell it what you studied, it builds flashcards, then
 quizzes you by voice on a spaced schedule that it remembers across sessions.

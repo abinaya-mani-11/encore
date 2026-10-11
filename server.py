@@ -1,4 +1,4 @@
-"""Recall MCP server (Streamable HTTP, MCP spec 2025-11-25+).
+"""Encore MCP server (Streamable HTTP, MCP spec 2025-11-25+).
 
 Run: python server.py   ->  http://127.0.0.1:8000/mcp
 """
@@ -8,7 +8,7 @@ import db
 from generate import make_cards
 
 mcp = MCPServer(
-    "Recall",
+    "Encore",
     instructions=(
         "Voice study coach. add_material turns notes into flashcards. To quiz: call "
         "next_card, ask the question aloud, judge the user's spoken answer yourself, "

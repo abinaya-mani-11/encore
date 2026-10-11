@@ -1,11 +1,11 @@
-"""SQLite card store. State persists across sessions (the point of Recall)."""
+"""SQLite card store. State persists across sessions (the point of Encore)."""
 import os
 import sqlite3
 from datetime import date
 
 import srs
 
-DB_PATH = os.environ.get("RECALL_DB", "recall.db")
+DB_PATH = os.environ.get("ENCORE_DB", "encore.db")
 
 
 def _conn() -> sqlite3.Connection:

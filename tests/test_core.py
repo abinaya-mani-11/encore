@@ -4,7 +4,7 @@ import tempfile
 from datetime import date, timedelta
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-os.environ["RECALL_DB"] = os.path.join(tempfile.mkdtemp(), "t.db")
+os.environ["ENCORE_DB"] = os.path.join(tempfile.mkdtemp(), "t.db")
 
 import db
 import srs
