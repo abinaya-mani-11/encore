@@ -27,30 +27,5 @@ def test_flow():
     assert db.stats() == {"total": 1, "due_today": 0, "mastered": 0}
 
 
-def test_server_validation():
-    import server
-
-    assert "didn't get any notes" in server.add_material("x", "   ")
-    assert "one topic" in server.add_material("x", "a" * (server.MAX_TEXT + 1))
-    assert "couldn't find anything" in server.add_material("x", "no questions here")
-    assert "error" in server.grade_card(999999, True)
-
-    import logging
-
-    real = server.make_cards
-    server.make_cards = lambda t: 1 / 0  # simulate a Bedrock failure
-    logging.disable(logging.CRITICAL)
-    try:
-        assert "try again" in server.add_material("x", "What is ATP? energy")
-    finally:
-        server.make_cards = real
-        logging.disable(logging.NOTSET)
-
-    assert server.add_material("  ", "What is DNA? Genetic code").startswith("Added 1 flashcard from your notes")
-    c = server.next_card()
-    assert server.grade_card(c["id"], False)["comes_back"] == "tomorrow"
-    assert "cards" in server.progress()["message"]
-
-
 if __name__ == "__main__":
-    test_srs(); test_flow(); test_server_validation(); print("ok")
+    test_srs(); test_flow(); print("ok")

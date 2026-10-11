@@ -27,9 +27,8 @@ Mini challenges: **AWS Builder** (Amazon Bedrock) and **Open Source** (MIT).
 - MCP tools (see `server.py`):
   - `add_material(title, text) -> str`
   - `next_card() -> {id, title, question} | {done, message}`
-  - `grade_card(card_id, correct) -> {answer, next_review, comes_back} | {error}`
-  - `progress() -> {total, due_today, mastered, message}`
-  - Errors and `message` / `comes_back` are plain sentences the agent can read aloud.
+  - `grade_card(card_id, correct) -> {answer, next_review}`
+  - `progress() -> {total, due_today, mastered}`
 - The **agent** judges the spoken answer, then calls `grade_card`. The server never sees the user's answer.
 
 ## Voice flow
