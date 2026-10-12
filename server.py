@@ -79,4 +79,6 @@ def progress() -> dict:
 
 
 if __name__ == "__main__":
-    mcp.run(transport="streamable-http")
+    import os
+
+    mcp.run(transport="streamable-http", port=int(os.environ.get("ENCORE_PORT", "8000")))

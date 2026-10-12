@@ -30,6 +30,7 @@ Mini challenges: **AWS Builder** (Amazon Bedrock) and **Open Source** (MIT).
   - `grade_card(card_id, correct) -> {answer, next_review, comes_back} | {error}`
   - `progress() -> {total, due_today, mastered, message}`
   - Errors and `message` / `comes_back` are plain sentences the agent can read aloud.
+  - Wire format: dict results arrive as **JSON text** in `content[0].text` (`structured_content` is empty); `add_material` returns plain text.
 - The **agent** judges the spoken answer, then calls `grade_card`. The server never sees the user's answer.
 
 ## Voice flow
