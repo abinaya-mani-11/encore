@@ -2,21 +2,51 @@
 
 Run: python server.py   ->  http://127.0.0.1:8000/mcp
 """
-from mcp.server.mcpserver import MCPServer
+import json
+from pathlib import Path
+
 from dotenv import load_dotenv
+from mcp.server.apps import Apps, ResourceCsp
+from mcp.server.mcpserver import MCPServer
 
 import db
 from generate import make_cards
 
 load_dotenv()
 
+apps = Apps()
+FLASHCARD_APP_URI = "ui://encore/flashcards.html"
+apps.add_html_resource(
+    FLASHCARD_APP_URI,
+    (Path(__file__).parent / "web" / "flashcards.html").read_text(encoding="utf-8"),
+    name="Encore flashcards",
+    title="Your flashcards",
+    description="Browse saved flashcards and reveal their answers.",
+    csp=ResourceCsp(resource_domains=["https://esm.sh"]),
+    prefers_border=True,
+)
+
+@apps.tool(
+    resource_uri=FLASHCARD_APP_URI,
+    visibility=["model", "app"],
+    title="Show saved flashcards",
+    description="Display the learner's saved flashcards in the interactive flashcard view.",
+)
+def list_flashcards() -> str:
+    """Return saved flashcards and open the interactive flashcard view."""
+    cards = db.list_cards()
+    return json.dumps({"cards": cards}, ensure_ascii=False)
+
+
 mcp = MCPServer(
     "Encore",
     instructions=(
         "Voice study coach. add_material turns notes into flashcards. To quiz: call "
         "next_card, ask the question aloud, judge the user's spoken answer yourself, "
-        "then call grade_card. Cards return on a spaced schedule across sessions."
+        "then call grade_card. Cards return on a spaced schedule across sessions. "
+        "When the learner asks to see their flashcards, call list_flashcards."
     ),
+    extensions=[apps],
 )
 
 

@@ -36,6 +36,13 @@ def next_due() -> dict | None:
     return dict(r) if r else None
 
 
+def list_cards() -> list[dict]:
+    """Return all saved flashcards in review order."""
+    with _conn() as c:
+        rows = c.execute("SELECT * FROM cards ORDER BY due, id").fetchall()
+    return [dict(row) for row in rows]
+
+
 def grade(card_id: int, correct: bool) -> dict | None:
     with _conn() as c:
         r = c.execute("SELECT * FROM cards WHERE id=?", (card_id,)).fetchone()
