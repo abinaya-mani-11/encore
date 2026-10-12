@@ -1,9 +1,10 @@
+import json
 import sys
 from contextlib import asynccontextmanager
 from pathlib import Path
 from types import SimpleNamespace
 from unittest import IsolatedAsyncioTestCase
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
@@ -84,6 +85,51 @@ class FakeClientSession:
 
 
 class WebAgentTests(IsolatedAsyncioTestCase):
+    async def asyncSetUp(self):
+        web_app._conversations.clear()
+        web_app._conversation_locks.clear()
+
+    async def test_failed_turn_does_not_change_saved_conversation(self):
+        conversation_id, messages, _ = await web_app._conversation(None)
+        saved_turn = {"role": "user", "content": [{"text": "Earlier question"}]}
+        messages.append(saved_turn)
+
+        async def receive():
+            return {
+                "type": "http.request",
+                "body": json.dumps(
+                    {
+                        "conversation_id": conversation_id,
+                        "message": "Continue the quiz",
+                    }
+                ).encode(),
+                "more_body": False,
+            }
+
+        request = web_app.Request(
+            {
+                "type": "http",
+                "method": "POST",
+                "headers": [(b"content-type", b"application/json")],
+                "path": "/api/chat",
+                "query_string": b"",
+                "scheme": "http",
+                "server": ("test", 80),
+                "client": ("test", 1234),
+            },
+            receive,
+        )
+        with patch.object(
+            web_app,
+            "run_agent",
+            new_callable=AsyncMock,
+            side_effect=RuntimeError("Bedrock unavailable"),
+        ):
+            response = await web_app.chat(request)
+
+        self.assertEqual(response.status_code, 502)
+        self.assertEqual(messages, [saved_turn])
+
     async def test_agent_lists_calls_mcp_tools_and_returns_bedrock_reply(self):
         bedrock = FakeBedrock()
         session = FakeClientSession()

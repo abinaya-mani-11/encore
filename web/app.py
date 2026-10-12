@@ -197,23 +197,22 @@ async def chat(request: Request) -> JSONResponse:
         return JSONResponse({"error": str(error.args[0])}, status_code=404)
 
     async with lock:
-        messages.append({"role": "user", "content": [{"text": text.strip()}]})
+        turn_messages = [*messages, {"role": "user", "content": [{"text": text.strip()}]}]
         try:
-            reply = await run_agent(messages)
+            reply = await run_agent(turn_messages)
         except (BotoCoreError, MCPError, AgentLoopLimitError, TimeoutError, OSError) as error:
-            messages.pop()
             logger.exception("Encore agent request failed: %s", error)
             return JSONResponse(
                 {"error": "I couldn't reach the study service. Please try again."},
                 status_code=502,
             )
         except RuntimeError as error:
-            messages.pop()
             logger.exception("Encore agent returned an invalid response: %s", error)
             return JSONResponse(
                 {"error": "I couldn't finish that request. Please try again."},
                 status_code=502,
             )
+        messages[:] = turn_messages
 
     return JSONResponse({"reply": reply, "conversation_id": conversation_id})
 
