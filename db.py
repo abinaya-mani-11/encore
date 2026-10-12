@@ -27,11 +27,17 @@ def add_cards(title: str, cards: list[dict]) -> int:
     return len(cards)
 
 
-def next_due() -> dict | None:
+def _topic(title: str | None) -> tuple[str, tuple]:
+    """SQL filter for an optional, case-insensitive topic title."""
+    return (" AND LOWER(title) = LOWER(?)", (title.strip(),)) if title and title.strip() else ("", ())
+
+
+def next_due(title: str | None = None) -> dict | None:
+    where, args = _topic(title)
     with _conn() as c:
         r = c.execute(
-            "SELECT * FROM cards WHERE due <= ? ORDER BY due, id LIMIT 1",
-            (date.today().isoformat(),),
+            f"SELECT * FROM cards WHERE due <= ?{where} ORDER BY due, id LIMIT 1",
+            (date.today().isoformat(), *args),
         ).fetchone()
     return dict(r) if r else None
 
@@ -41,6 +47,31 @@ def list_cards() -> list[dict]:
     with _conn() as c:
         rows = c.execute("SELECT * FROM cards ORDER BY due, id").fetchall()
     return [dict(row) for row in rows]
+
+
+def next_review(title: str | None = None) -> str | None:
+    """Earliest future due date, or None if there are no cards."""
+    where, args = _topic(title)
+    with _conn() as c:
+        return c.execute(f"SELECT MIN(due) FROM cards WHERE 1=1{where}", args).fetchone()[0]
+
+
+def materials() -> list[dict]:
+    with _conn() as c:
+        rows = c.execute(
+            "SELECT title, COUNT(*) AS cards, SUM(due <= ?) AS due_today FROM cards "
+            "GROUP BY LOWER(title) ORDER BY MIN(id)",
+            (date.today().isoformat(),),
+        ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def delete_material(title: str) -> int:
+    where, args = _topic(title)
+    if not where:
+        return 0
+    with _conn() as c:
+        return c.execute(f"DELETE FROM cards WHERE 1=1{where}", args).rowcount
 
 
 def grade(card_id: int, correct: bool) -> dict | None:
