@@ -3,9 +3,12 @@
 Run: python server.py   ->  http://127.0.0.1:8000/mcp
 """
 from mcp.server.mcpserver import MCPServer
+from dotenv import load_dotenv
 
 import db
 from generate import make_cards
+
+load_dotenv()
 
 mcp = MCPServer(
     "Encore",
