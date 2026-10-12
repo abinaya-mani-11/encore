@@ -53,7 +53,8 @@ async def call(client: Client, name: str, args: dict | None = None):
 async def run(url: str) -> None:
     async with Client(url) as client:
         tools = {t.name for t in (await client.list_tools()).tools}
-        assert tools >= {"add_material", "next_card", "grade_card", "progress"}, tools
+        assert tools >= {"add_material", "next_card", "grade_card", "progress",
+                         "list_materials", "delete_material"}, tools
 
         p = await call(client, "progress")
         assert "don't have any flashcards" in str(p)
@@ -77,6 +78,13 @@ async def run(url: str) -> None:
         assert "error" in await call(client, "grade_card", {"card_id": 999, "correct": True})
         p = await call(client, "progress")
         assert p["total"] == 2 and p["due_today"] == 0, p
+
+        await call(client, "add_material", {"title": "chem", "text": "What is H2O? water"})
+        card = await call(client, "next_card", {"title": "chem"})
+        assert card["question"] == "What is H2O?", card
+        m = await call(client, "list_materials")
+        assert [x["title"] for x in m["materials"]] == ["biology", "chem"], m
+        assert "Deleted 1 flashcard" in await call(client, "delete_material", {"title": "chem"})
 
 
 def test_integration():

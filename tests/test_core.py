@@ -52,5 +52,33 @@ def test_server_validation():
     assert "cards" in server.progress()["message"]
 
 
+def test_materials():
+    import server
+
+    for t in [x["title"] for x in db.materials()]:  # isolate from earlier tests
+        db.delete_material(t)
+    assert "haven't added" in server.list_materials()["message"]
+    assert "don't have any flashcards" in server.next_card()["message"]
+
+    server.add_material("Bio", "What is ATP? energy\nWhat is DNA? code")
+    server.add_material("chem", "What is H2O? water")
+    assert server.next_card("CHEM")["question"] == "What is H2O?"  # case-insensitive topic
+    assert server.next_card("bio")["title"] == "Bio"
+    assert "on physics" in server.next_card("physics")["message"]
+
+    m = server.list_materials()
+    assert [(x["title"], x["cards"]) for x in m["materials"]] == [("Bio", 2), ("chem", 1)]
+    assert "Bio (2 cards)" in m["message"]
+
+    c = server.next_card("chem")
+    server.grade_card(c["id"], True)
+    assert server.next_card("chem")["message"] == "You're all caught up on chem. Your next review is in 3 days."
+
+    assert server.delete_material("bio") == "Deleted 2 flashcards from bio."
+    assert "couldn't find" in server.delete_material("bio")
+    assert "couldn't find" in server.delete_material("  ")
+    assert db.stats()["total"] == 1
+
+
 if __name__ == "__main__":
-    test_srs(); test_flow(); test_server_validation(); print("ok")
+    test_srs(); test_flow(); test_server_validation(); test_materials(); print("ok")

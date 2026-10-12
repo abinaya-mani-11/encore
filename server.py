@@ -18,7 +18,9 @@ mcp = MCPServer(
     instructions=(
         "Voice study coach. add_material turns notes into flashcards. To quiz: call "
         "next_card, ask the question aloud, judge the user's spoken answer yourself, "
-        "then call grade_card. Cards return on a spaced schedule across sessions. "
+        "then call grade_card, and keep going until next_card says done. For 'quiz me on X' "
+        "pass title=X. Cards return on a spaced schedule across sessions. list_materials "
+        "names the topics; confirm with the user before delete_material. "
         "Tool results include plain sentences (message, error, comes_back) you can read aloud."
     ),
 )
@@ -50,12 +52,37 @@ def add_material(title: str, text: str) -> str:
 
 
 @mcp.tool()
-def next_card() -> dict:
-    """Get the next flashcard due for review (question only)."""
-    c = db.next_due()
-    if not c:
-        return {"done": True, "message": "Nothing due. You're all caught up."}
-    return {"id": c["id"], "title": c["title"], "question": c["question"]}
+def next_card(title: str = "") -> dict:
+    """Get the next flashcard due for review (question only). Pass title to quiz one topic."""
+    c = db.next_due(title)
+    if c:
+        return {"id": c["id"], "title": c["title"], "question": c["question"]}
+    upcoming = db.next_review(title)
+    topic = f" on {title.strip()}" if title.strip() else ""
+    if not upcoming:
+        msg = f"You don't have any flashcards{topic} yet. Tell me what you studied to get started."
+    else:
+        msg = f"You're all caught up{topic}. Your next review is {_when(upcoming)}."
+    return {"done": True, "message": msg}
+
+
+@mcp.tool()
+def list_materials() -> dict:
+    """List study topics with how many cards each has and how many are due today."""
+    items = db.materials()
+    if not items:
+        return {"materials": [], "message": "You haven't added any study material yet."}
+    names = ", ".join(f"{m['title']} ({m['cards']} cards)" for m in items)
+    return {"materials": items, "message": f"Your topics: {names}."}
+
+
+@mcp.tool()
+def delete_material(title: str) -> str:
+    """Delete every flashcard for a topic. Confirm with the user before calling."""
+    n = db.delete_material(title)
+    if not n:
+        return f"I couldn't find a topic called {title.strip() or 'that'}."
+    return f"Deleted {n} flashcard{'s' if n != 1 else ''} from {title.strip()}."
 
 
 @mcp.tool()
