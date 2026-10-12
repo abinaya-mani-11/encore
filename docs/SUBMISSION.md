@@ -5,6 +5,18 @@
 **Problem:** Students forget most of what they hear within days, and nobody has time to turn notes into review material.
 **Track:** Alexa+ (simulated Alexa+ experience + self-hosted MCP server). **Mini challenges:** AWS Builder, Open Source.
 
+## Text description (draft, update once Bedrock + simulator land)
+**Inspiration.** Students forget most of a lecture within days. Spaced repetition fixes that, but making flashcards takes time nobody has. With Alexa+ you can just say what you learned.
+
+**What it does.** Tell Alexa+ what you studied, by speaking or pasting notes. Encore turns it into flashcards, then quizzes you by voice: it asks a question, you answer out loud, it judges your answer and tells you when that card comes back. Cards you miss return tomorrow; cards you know return in 3, 7, then 14 days. Progress persists, so every session picks up where the last one ended. You can quiz one topic ("quiz me on photosynthesis"), list topics, and delete them.
+
+**How we built it.** A self-hosted MCP server (Python, official MCP SDK 2.x, Streamable HTTP, spec 2025-11-25) exposes six tools: add_material, next_card, grade_card, progress, list_materials, delete_material. State lives in SQLite with a Leitner spaced-repetition schedule. Amazon Bedrock generates the flashcards. A web app simulates Alexa+: browser speech recognition and synthesis, plus a Bedrock agent loop that connects to the server as an MCP client and calls the tools. Every tool result includes a sentence the agent can read aloud.
+
+**Challenges.** <fill in>
+**Accomplishments.** <fill in>
+**What we learned.** <fill in>
+**What's next.** Real Alexa+ integration, importing lecture recordings and PDFs, and shared decks for study groups.
+
 ## Demo video script (under 3:00, best part first)
 - 0:00-0:20 Problem, then "Encore: a voice study coach for Alexa+"
 - 0:20-1:00 Speak your notes, flashcards get created (Bedrock)
