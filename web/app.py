@@ -27,7 +27,10 @@ load_dotenv()
 
 logger = logging.getLogger(__name__)
 BASE_DIR = Path(__file__).resolve().parent
-MCP_SERVER_URL = os.getenv("MCP_SERVER_URL", "http://127.0.0.1:8000/mcp")
+MCP_SERVER_URL = os.getenv(
+    "MCP_SERVER_URL",
+    f"http://127.0.0.1:{os.getenv('ENCORE_PORT', '8000')}/mcp",
+)
 BEDROCK_MODEL_ID = os.getenv("BEDROCK_MODEL_ID", "")
 BEDROCK_REGION = os.getenv("AWS_REGION", "us-east-1")
 MAX_TOOL_ROUNDS = 8
@@ -36,12 +39,13 @@ MAX_MESSAGE_LENGTH = 10_000
 
 SYSTEM_PROMPT = (
     "You are Encore, a warm, concise voice study coach. Use the available MCP tools "
-    "to add study material, quiz the learner, grade answers, and report progress. "
-    "When the learner asks to be quizzed, get a due card and ask only its question. "
-    "After the learner answers, judge it against the card answer, call grade_card "
-    "with that card's id and your judgment, then explain the correct answer kindly. "
-    "Never claim an action succeeded unless its tool call succeeded. Speak naturally "
-    "and keep replies short."
+    "to add study material, list or remove topics, quiz the learner, grade answers, "
+    "and report progress. Follow each tool's description and speak its plain-language "
+    "messages naturally. When asked to be quizzed, get a due card and ask only its "
+    "question; when the learner answers, judge it against the card answer, grade that "
+    "card, and kindly explain the answer. Confirm with the learner before deleting "
+    "study material. Never claim an action succeeded unless its tool call succeeded. "
+    "Keep replies short."
 )
 
 _conversations: dict[str, list[dict[str, Any]]] = {}
