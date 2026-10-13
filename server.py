@@ -4,9 +4,13 @@ Run: python server.py   ->  http://127.0.0.1:8000/mcp
 """
 import logging
 from datetime import date
+from pathlib import Path
 
+from mcp import types
+from mcp.server.apps import Apps
 from mcp.server.mcpserver import MCPServer
 from dotenv import load_dotenv
+from starlette.responses import HTMLResponse
 
 import db
 from generate import make_cards
@@ -14,6 +18,34 @@ from generate import make_cards
 load_dotenv()
 log = logging.getLogger("encore")
 MAX_TEXT = 20_000  # ponytail: hard cap keeps one Bedrock call cheap; raise once generate.py chunks
+FLASHCARDS_URI = "ui://encore/flashcards.html"
+
+apps = Apps()
+apps.add_html_resource(
+    FLASHCARDS_URI,
+    (Path(__file__).resolve().parent / "mcp_apps" / "flashcards.html").read_text(encoding="utf-8"),
+    name="Encore flashcards",
+    title="Encore flashcards",
+    description="An interactive view of saved study flashcards.",
+)
+
+
+@apps.tool(
+    resource_uri=FLASHCARDS_URI,
+    visibility=["model", "app"],
+    name="view_flashcards",
+    title="View flashcards",
+    description="Show saved flashcards, optionally filtered by topic.",
+)
+def view_flashcards(title: str = "") -> types.CallToolResult:
+    cards = db.flashcards(title)
+    label = f" for {title.strip()}" if title.strip() else ""
+    message = f"Showing {len(cards)} flashcards{label}." if cards else f"No flashcards found{label}."
+    return types.CallToolResult(
+        content=[types.TextContent(type="text", text=message)],
+        structured_content={"cards": cards, "message": message, "title": title.strip()},
+    )
+
 
 mcp = MCPServer(
     "Encore",
@@ -22,10 +54,38 @@ mcp = MCPServer(
         "next_card, ask the question aloud, judge the user's spoken answer yourself, "
         "then call grade_card, and keep going until next_card says done. For 'quiz me on X' "
         "pass title=X. Cards return on a spaced schedule across sessions. list_materials "
-        "names the topics; confirm with the user before delete_material. "
+        "names the topics; confirm with the user before delete_material. Use view_flashcards "
+        "to show saved questions and answers in an interactive view. "
         "Tool results include plain sentences (message, error, comes_back) you can read aloud."
     ),
+    extensions=[apps],
 )
+
+
+def _root_page() -> str:
+    return """<!doctype html>
+<html lang=\"en\">
+  <head>
+    <meta charset=\"utf-8\" />
+    <meta http-equiv=\"refresh\" content=\"0; url=/mcp\" />
+    <title>Encore MCP</title>
+    <style>
+      body { font-family: sans-serif; background: #0f172a; color: #e2e8f0; display: grid; place-items: center; height: 100vh; margin: 0; }
+      a { color: #7dd3fc; }
+    </style>
+  </head>
+  <body>
+    <div>
+      <h1>Encore MCP server</h1>
+      <p>Redirecting to <a href=\"/mcp\">/mcp</a>…</p>
+    </div>
+  </body>
+</html>"""
+
+
+@mcp.custom_route(path="/", methods=["GET"])  # type: ignore[attr-defined]
+def root_route(_: object) -> HTMLResponse:
+    return HTMLResponse(_root_page())
 
 
 def _when(due: str) -> str:

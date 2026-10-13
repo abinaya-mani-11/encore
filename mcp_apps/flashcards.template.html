@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light dark" />
+    <title>Encore flashcards</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        font-family: system-ui, sans-serif;
+        --bg: #101827;
+        --panel: #172337;
+        --text: #edf4ff;
+        --muted: #a3b1c9;
+        --accent: #8ec5ff;
+      }
+
+      * { box-sizing: border-box; }
+      body { margin: 0; padding: 20px; background: var(--bg); color: var(--text); }
+      main { max-width: 760px; margin: 0 auto; }
+      h1 { margin: 0; font-size: 1.35rem; }
+      #status { min-height: 1.5em; color: var(--muted); }
+      #cards { display: grid; gap: 12px; padding: 0; list-style: none; }
+      details { padding: 16px; border: 1px solid #ffffff20; border-radius: 14px; background: var(--panel); }
+      summary { color: var(--accent); cursor: pointer; font-weight: 650; }
+      .answer { margin: 14px 0 0; line-height: 1.5; }
+      .meta { margin-top: 12px; color: var(--muted); font-size: 0.85rem; }
+      .empty { padding: 18px; border: 1px dashed #ffffff30; border-radius: 14px; color: var(--muted); }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Encore flashcards</h1>
+      <p id="status" role="status" aria-live="polite">Waiting for flashcards…</p>
+      <ul id="cards"></ul>
+    </main>
+    <script>__FLASHCARDS_APP_BUNDLE__</script>
+  </body>
+</html>

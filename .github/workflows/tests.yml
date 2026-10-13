@@ -11,6 +11,16 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
       - run: pip install -r requirements.txt
+      - run: npm ci
+      - run: npm run build:mcp-app
+      - run: npm run check:types
       - run: python tests/test_core.py
       - run: python tests/test_integration.py
+      - run: python tests/test_web.py
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e

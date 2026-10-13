@@ -8,7 +8,7 @@ Fill this in as you go. The submission needs feedback on every tool; friction lo
 | MCP Python SDK (`mcp` 2.3) | MCP server over Streamable HTTP | Server ran on spec 2025-11-25 with no config | Most tutorials still use v1 `FastMCP`; v2 renamed it `MCPServer` | | |
 | Amazon Bedrock (boto3 Converse) | Flashcard generation in `generate.py`; agent loop in `web/app.py` | `converse()` API is clean and consistent across models; streaming variant available | Model ID list not surfaced in the console — had to look up IDs in docs; `nova-lite` not available in all regions | Install `boto3`; set `AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `BEDROCK_MODEL_ID` in `.env` | Yes — Converse API abstracts provider differences well |
 | Alexa+ / MCP docs | | | | | |
-| MCP Apps | | | | | |
+| MCP Apps (MCP Python SDK Apps extension + ext-apps browser SDK) | Interactive `ui://encore/flashcards.html` tool result | Python SDK binds the UI resource and advertises it on the tool; the bundled browser SDK handles host communication | The UI script must be bundled into a self-contained HTML resource; a normal browser cannot render an MCP App without a compatible host | Use the MCP Python Apps extension, the `@modelcontextprotocol/ext-apps` SDK, and rebuild the resource with `npm run build:mcp-app` | Yes — the text fallback and interactive view work well together |
 
 ## Friction log
 | Date | Task | Steps | Expected | Actual | Severity | Workaround | Suggestion |

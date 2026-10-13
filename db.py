@@ -59,6 +59,17 @@ def materials() -> list[dict]:
     return [dict(r) for r in rows]
 
 
+def flashcards(title: str | None = None, limit: int = 100) -> list[dict]:
+    where, args = _topic(title)
+    with _conn() as c:
+        rows = c.execute(
+            "SELECT id, title, question, answer, box, due FROM cards "
+            f"WHERE 1=1{where} ORDER BY id LIMIT ?",
+            (*args, limit),
+        ).fetchall()
+    return [dict(row) for row in rows]
+
+
 def delete_material(title: str) -> int:
     where, args = _topic(title)
     if not where:

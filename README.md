@@ -18,6 +18,16 @@ python server.py                 # MCP server at http://127.0.0.1:8000/mcp
 ```
 `ENCORE_PORT` changes the port (default 8000).
 
+Copy `.env.example` to `.env` and fill in AWS credentials for Bedrock.
+The flashcard MCP App HTML is included in the repository. To rebuild it after
+changing `mcp_apps/flashcards.ts`, use Node.js 20+:
+```bash
+npm ci
+npm run build:mcp-app
+```
+
+Run the browser voice-flow tests after `npm ci`, with
+`npx playwright install chromium` and `npm run test:e2e`.
 Copy `.env.example` to `.env` and fill in AWS credentials.
 `BEDROCK_MODEL_ID` defaults to `amazon.nova-lite-v1:0`; change it if needed.
 
@@ -29,6 +39,7 @@ Copy `.env.example` to `.env` and fill in AWS credentials.
 | `generate.py` | Notes to flashcards (Bedrock); chunking + retry |
 | `ingest.py` | Extract text from PDF / VTT / SRT / plain-text files |
 | `web/` | Simulated Alexa+ voice client |
+| `mcp_apps/` | MCP Apps flashcard UI source and bundled resource |
 | `docs/` | Submission notes, product feedback, friction log |
 
 ## License

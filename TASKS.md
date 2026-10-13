@@ -21,11 +21,11 @@ Issues: https://github.com/g-s-jithesh/encore/issues
 - [ ] Stretch: import a PDF or transcript file into `add_material`
 
 ## Bee (@abinaya-mani-11), 30%: Alexa+ simulator + demo
-- [ ] `web/app.py`: agent loop. List tools from the MCP server, call Bedrock Converse with tool use, run tool calls through an MCP client
-- [ ] `web/index.html`: voice UI (Web Speech API speech-to-text and text-to-speech), Alexa-style look, text fallback
-- [ ] End-to-end by voice: add notes, quiz, grade, progress
+- [x] `web/app.py`: agent loop. List tools from the MCP server, call Bedrock Converse with tool use, run tool calls through an MCP client
+- [x] `web/index.html`: voice UI (Web Speech API speech-to-text and text-to-speech), Alexa-style look, text fallback
+- [x] End-to-end by voice: add notes, quiz, grade, progress (browser flow tested with simulated speech and mocked chat API; live Bedrock credentials are still required for a real run)
 - [ ] Record the demo video using the script in `docs/SUBMISSION.md`
-- [ ] Stretch: MCP App flashcard view (`ui://` resource) using the `create-mcp-app` / `add-app-to-server` skills
+- [x] Stretch: MCP App flashcard view (`ui://` resource) using the MCP Python SDK Apps extension
 
 ## Everyone
 - [ ] Log friction as it happens in `docs/FEEDBACK.md` (up to +10% judging bonus)
