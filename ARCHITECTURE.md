@@ -8,10 +8,12 @@ Mini challenges: **AWS Builder** (Amazon Bedrock) and **Open Source** (MIT).
  Browser (web/)                      web/app.py                       server.py (MCP)
  mic -> Web Speech STT --text-->  agent loop: Bedrock     --MCP-->   tools: add_material,
  speaker <- Web Speech TTS <--   Converse + tool use      Streamable  next_card, grade_card,
- (stretch: MCP App card UI)      (acts as MCP client)     HTTP /mcp   progress
-                                                                        |            |
-                                                                   generate.py   db.py + srs.py
-                                                                   (Bedrock)     (SQLite, Leitner)
+ (text fallback)                   (acts as MCP client)     HTTP /mcp   progress, view_flashcards
+                                                                        |              |
+                                                                  generate.py       Apps extension
+                                                                  (Bedrock)        ui:// flashcards
+                                                                                  db.py + srs.py
+                                                                                  (SQLite, Leitner)
 ```
 
 ## Components
@@ -31,9 +33,11 @@ Mini challenges: **AWS Builder** (Amazon Bedrock) and **Open Source** (MIT).
   - `delete_material(title) -> str` (agent confirms with the user first)
   - `grade_card(card_id, correct) -> {answer, next_review, comes_back} | {error}`
   - `progress() -> {total, due_today, mastered, message}`
+  - `view_flashcards(title="") -> MCP App with saved questions and answers`
   - Errors and `message` / `comes_back` are plain sentences the agent can read aloud.
-  - Wire format: dict results arrive as **JSON text** in `content[0].text` (`structured_content` is empty); `add_material` returns plain text.
+  - Wire format: dict results arrive as **JSON text** in `content[0].text`; `view_flashcards` also returns structured content for its MCP App UI.
 - The **agent** judges the spoken answer, then calls `grade_card`. The server never sees the user's answer.
+- `view_flashcards` binds its tool result to `ui://encore/flashcards.html` and keeps a text response for clients without MCP Apps support.
 
 ## Voice flow
 1. "Alexa, I just studied photosynthesis: ..." -> agent calls `add_material`.
@@ -51,7 +55,7 @@ Mini challenges: **AWS Builder** (Amazon Bedrock) and **Open Source** (MIT).
 - **Stateful across sessions** (SQLite + spaced repetition). The rules list "context-aware add-on that maintains state across sessions" as creative; a single-turn Q&A bot is listed as obvious.
 - A real MCP server over Streamable HTTP, called at runtime by an agent through an MCP client.
 - Bedrock used for both card generation and the agent, documented for AWS Builder.
-- Stretch: MCP App (`ui://` flashcard view rendered inline), also named as creative.
+- MCP App: `view_flashcards` binds its structured flashcard result to the interactive `ui://` resource.
 
 ## Out of scope
 Accounts, multi-user, auth, mobile app, SM-2 scheduling, a physical Alexa device.

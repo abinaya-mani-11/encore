@@ -52,9 +52,16 @@ async def call(client: Client, name: str, args: dict | None = None):
 
 async def run(url: str) -> None:
     async with Client(url) as client:
-        tools = {t.name for t in (await client.list_tools()).tools}
+        listed_tools = (await client.list_tools()).tools
+        tools = {t.name for t in listed_tools}
         assert tools >= {"add_material", "next_card", "grade_card", "progress",
-                         "list_materials", "delete_material"}, tools
+                         "list_materials", "delete_material", "view_flashcards"}, tools
+        app_tool = next(t for t in listed_tools if t.name == "view_flashcards")
+        tool_data = app_tool.model_dump(by_alias=True, exclude_none=True)
+        assert tool_data["_meta"]["ui"]["resourceUri"] == "ui://encore/flashcards.html"
+        app_resource = await client.read_resource("ui://encore/flashcards.html")
+        assert app_resource.contents[0].mime_type == "text/html;profile=mcp-app"
+        assert "Encore flashcards" in app_resource.contents[0].text
 
         p = await call(client, "progress")
         assert "don't have any flashcards" in str(p)
@@ -64,6 +71,9 @@ async def run(url: str) -> None:
             "text": "What is ATP? Cell energy currency\nWhat is DNA? Genetic code",
         })
         assert "Added 2 flashcards" in str(msg), msg
+        flashcards = await client.call_tool("view_flashcards", {"title": "biology"})
+        assert flashcards.structured_content["cards"][0]["question"] == "What is ATP?"
+        assert flashcards.structured_content["cards"][0]["answer"] == "Cell energy currency"
 
         card = await call(client, "next_card")
         assert card["question"] == "What is ATP?", card
