@@ -1,2 +1,5 @@
 mcp>=2.3
 boto3
+python-dotenv
+starlette
+uvicorn
