@@ -208,7 +208,9 @@ async def _run_agent(messages: list[dict[str, Any]], bedrock_client: Any | None,
 
 async def _conversation(conversation_id: str | None) -> tuple[str, list[dict[str, Any]], asyncio.Lock]:
     async with _conversations_lock:
-        if conversation_id is None:
+        # an unknown id means this process restarted (history is in memory): start fresh
+        # instead of failing every later turn from a page that's still open
+        if conversation_id is None or conversation_id not in _conversations:
             conversation_id = str(uuid4())
             _conversations[conversation_id] = []
             _conversation_locks[conversation_id] = asyncio.Lock()
@@ -216,8 +218,6 @@ async def _conversation(conversation_id: str | None) -> tuple[str, list[dict[str
                 oldest_id = next(iter(_conversations))
                 _conversations.pop(oldest_id)
                 _conversation_locks.pop(oldest_id)
-        elif conversation_id not in _conversations:
-            raise KeyError("Conversation not found. Start a new conversation.")
         return conversation_id, _conversations[conversation_id], _conversation_locks[conversation_id]
 
 
@@ -247,10 +247,7 @@ async def chat(request: Request) -> JSONResponse:
     conversation_id = payload.get("conversation_id")
     if conversation_id is not None and not isinstance(conversation_id, str):
         return JSONResponse({"error": "The conversation id is invalid."}, status_code=400)
-    try:
-        conversation_id, messages, lock = await _conversation(conversation_id)
-    except KeyError as error:
-        return JSONResponse({"error": str(error.args[0])}, status_code=404)
+    conversation_id, messages, lock = await _conversation(conversation_id)
 
     async with lock:
         turn_messages = [*messages, {"role": "user", "content": [{"text": text.strip()}]}]

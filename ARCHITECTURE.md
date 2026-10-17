@@ -55,6 +55,7 @@ Mini challenges: **AWS Builder** (Amazon Bedrock) and **Open Source** (MIT).
 - **Stateful across sessions** (SQLite + spaced repetition). The rules list "context-aware add-on that maintains state across sessions" as creative; a single-turn Q&A bot is listed as obvious.
 - A real MCP server over Streamable HTTP, called at runtime by an agent through an MCP client.
 - Bedrock used for both card generation and the agent, documented for AWS Builder.
+- `LLM_PROVIDER=gemini` swaps in Gemini (`gemini.py`) for both, e.g. while an AWS account is pending verification.
 - MCP App: `view_flashcards` binds its structured flashcard result to the interactive `ui://` resource.
 
 ## Out of scope

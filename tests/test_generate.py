@@ -21,6 +21,7 @@ from unittest.mock import MagicMock, patch
 
 # make sure the repo root is on the path
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+os.environ["LLM_PROVIDER"] = "bedrock"  # these tests mock the Bedrock client; never call a real model
 
 # ── helpers ───────────────────────────────────────────────────────────────────
 

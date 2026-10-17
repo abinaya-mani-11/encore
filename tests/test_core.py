@@ -80,6 +80,12 @@ def test_materials():
     assert "couldn't find" in server.delete_material("  ")
     assert db.stats()["total"] == 1
 
+    # a retried add_material (e.g. after a timeout) must not duplicate cards
+    assert "already saved" in server.add_material("CHEM", "What is H2O? water")
+    assert db.stats()["total"] == 1
+    assert server.progress()["message"].startswith("You have 1 card,")  # read aloud: no "1 cards"
+    assert "chem (1 card)" in server.list_materials()["message"]
+
 
 def test_gemini_thinking_config():
     import io

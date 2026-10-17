@@ -89,6 +89,13 @@ class WebAgentTests(IsolatedAsyncioTestCase):
         web_app._conversations.clear()
         web_app._conversation_locks.clear()
 
+    async def test_unknown_conversation_id_starts_fresh(self):
+        # after a web app restart, an open page still sends its old id
+        conversation_id, messages, _ = await web_app._conversation("id-from-before-restart")
+        self.assertNotEqual(conversation_id, "id-from-before-restart")
+        self.assertEqual(messages, [])
+        self.assertIs((await web_app._conversation(conversation_id))[1], messages)
+
     async def test_failed_turn_does_not_change_saved_conversation(self):
         conversation_id, messages, _ = await web_app._conversation(None)
         saved_turn = {"role": "user", "content": [{"text": "Earlier question"}]}

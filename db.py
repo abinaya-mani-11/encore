@@ -19,12 +19,21 @@ def _conn() -> sqlite3.Connection:
 
 
 def add_cards(title: str, cards: list[dict]) -> int:
+    """Save new cards; skip questions this topic already has, so a retried add_material can't duplicate."""
     with _conn() as c:
+        seen = {r[0] for r in c.execute(
+            "SELECT LOWER(TRIM(question)) FROM cards WHERE LOWER(title) = LOWER(?)", (title,))}
+        new = []
+        for x in cards:
+            key = x["question"].strip().lower()
+            if key not in seen:
+                seen.add(key)
+                new.append(x)
         c.executemany(
             "INSERT INTO cards (title, question, answer, due) VALUES (?,?,?,?)",
-            [(title, x["question"], x["answer"], date.today().isoformat()) for x in cards],
+            [(title, x["question"], x["answer"], date.today().isoformat()) for x in new],
         )
-    return len(cards)
+    return len(new)
 
 
 def _topic(title: str | None) -> tuple[str, tuple]:
