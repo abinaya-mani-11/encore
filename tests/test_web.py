@@ -1,4 +1,5 @@
 import json
+import os
 import sys
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -88,6 +89,22 @@ class WebAgentTests(IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
         web_app._conversations.clear()
         web_app._conversation_locks.clear()
+
+    async def test_missing_model_key_tells_you_what_to_set(self):
+        async def receive():
+            return {"type": "http.request", "body": b'{"message": "hi"}', "more_body": False}
+
+        request = web_app.Request(
+            {"type": "http", "method": "POST", "headers": [(b"content-type", b"application/json")],
+             "path": "/api/chat", "query_string": b"", "scheme": "http",
+             "server": ("test", 80), "client": ("test", 1234)},
+            receive,
+        )
+        env = {k: v for k, v in os.environ.items() if k != "GEMINI_API_KEY"}
+        with patch.object(web_app, "LLM_PROVIDER", "gemini"), patch.dict(os.environ, env, clear=True):
+            response = await web_app.chat(request)
+        self.assertEqual(response.status_code, 503)
+        self.assertIn("add GEMINI_API_KEY to .env", json.loads(response.body)["error"])
 
     async def test_unknown_conversation_id_starts_fresh(self):
         # after a web app restart, an open page still sends its old id
@@ -202,6 +219,7 @@ class WebAgentTests(IsolatedAsyncioTestCase):
             patch.object(web_app, "streamable_http_client", fake_transport),
             patch.object(web_app, "ClientSession", return_value=session),
             patch.object(web_app, "LLM_PROVIDER", "gemini"),
+            patch.dict(os.environ, {"GEMINI_API_KEY": "test-key"}),  # CI has no .env
             patch.object(web_app.gemini, "generate", fake_generate),
         ):
             reply = await web_app.run_agent([{"role": "user", "content": [{"text": "I studied ATP."}]}])

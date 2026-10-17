@@ -62,6 +62,16 @@ class AgentLoopLimitError(RuntimeError):
     """Raised when the model keeps requesting tools without producing a reply."""
 
 
+class SetupError(RuntimeError):
+    """The model isn't configured; the message tells the person running Encore what to set."""
+
+
+def _setup_problem() -> str | None:
+    if LLM_PROVIDER == "bedrock":
+        return None if BEDROCK_MODEL_ID else "Encore isn't set up yet: set BEDROCK_MODEL_ID in .env, then restart the web app."
+    return None if os.getenv("GEMINI_API_KEY") else "Encore isn't set up yet: add GEMINI_API_KEY to .env, then restart the web app."
+
+
 def _tool_specs(tools: list[Any]) -> list[dict[str, Any]]:
     return [
         {
@@ -147,9 +157,9 @@ async def run_agent(
 
 
 async def _run_agent(messages: list[dict[str, Any]], bedrock_client: Any | None, mcp_server_url: str) -> str:
+    if problem := _setup_problem():
+        raise SetupError(problem)
     if LLM_PROVIDER == "bedrock":
-        if not BEDROCK_MODEL_ID:
-            raise RuntimeError("BEDROCK_MODEL_ID is not configured.")
         client = bedrock_client or boto3.client("bedrock-runtime", region_name=BEDROCK_REGION)
         converse = partial(client.converse, modelId=BEDROCK_MODEL_ID)
     else:
@@ -253,6 +263,8 @@ async def chat(request: Request) -> JSONResponse:
         turn_messages = [*messages, {"role": "user", "content": [{"text": text.strip()}]}]
         try:
             reply = await run_agent(turn_messages)
+        except SetupError as error:
+            return JSONResponse({"error": str(error)}, status_code=503)
         except (BotoCoreError, MCPError, AgentLoopLimitError, TimeoutError, OSError) as error:
             logger.exception("Encore agent request failed: %s", error)
             return JSONResponse(
@@ -289,6 +301,8 @@ def _mcp_server_up() -> bool:
 
 @asynccontextmanager
 async def lifespan(_: Starlette):
+    if problem := _setup_problem():
+        logger.warning(problem)
     if not await anyio.to_thread.run_sync(_mcp_server_up):
         logger.warning("No MCP server at %s. Start it first: python server.py", MCP_SERVER_URL)
     yield
