@@ -128,6 +128,44 @@ test("Enter while a reply is pending keeps the typed text", async ({ page }) => 
   await expect(page.locator(".message.user")).toHaveCount(1);
 });
 
+test("interrupting speech for a new message does not show a voice error", async ({ page }) => {
+  await page.addInitScript(() => {
+    let current: { onerror?: (event: { error: string }) => void } | null = null;
+    Object.defineProperty(window, "SpeechSynthesisUtterance", {
+      value: class { lang = ""; constructor(public text: string) {} },
+    });
+    Object.defineProperty(window, "speechSynthesis", {
+      value: {
+        speak(utterance: typeof current) { current = utterance; }, // still "speaking"
+        cancel() { // like Chrome, the error event arrives after cancel() returns
+          const interrupted = current;
+          current = null;
+          setTimeout(() => interrupted?.onerror?.({ error: "interrupted" }), 50);
+        },
+      },
+    });
+  });
+  let calls = 0;
+  await page.route("**/api/chat", async (route) => {
+    calls += 1;
+    if (calls > 1) return; // second reply never arrives: Encore stays "thinking"
+    await route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({ reply: "First reply.", conversation_id: "speech-conversation" }),
+    });
+  });
+
+  await page.goto("/");
+  const box = page.getByRole("textbox");
+  await box.fill("first");
+  await box.press("Enter");
+  await expect(page.locator(".message.bot").last()).toHaveText("First reply.");
+  await box.fill("second"); // sending cancels the reply that is still being spoken
+  await box.press("Enter");
+  await expect(page.locator(".status")).toContainText("Thinking");
+  await expect(page.locator(".status")).not.toContainText("unavailable");
+});
+
 test("text input remains available when speech recognition is unsupported", async ({ page }) => {
   await page.addInitScript(() => {
     Object.defineProperty(window, "SpeechRecognition", { value: undefined });

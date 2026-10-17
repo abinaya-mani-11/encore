@@ -3,229 +3,338 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Encore</title>
+    <meta name="color-scheme" content="light dark" />
+    <title>Encore · study coach</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <style>
+      /* Study-desk look: ruled paper, ink, one amber accent. Tokens first, components use only these. */
       :root {
-        --bg: #0b1220;
-        --panel: #121b2b;
-        --panel-strong: #182438;
-        --accent: #8ec5ff;
-        --accent-2: #8ef0d2;
-        --text: #edf4ff;
-        --muted: #a3b1c9;
-        --error: #ff7f7f;
-        --shadow: rgba(0, 0, 0, 0.34);
+        --paper: #f4efe4;
+        --sheet: #fffdf8;
+        --ink: #1f2a37;
+        --muted: #5b6470;
+        --rule: #e4dccb;
+        --margin-line: #e9b8ab;
+        --card: #ffffff;
+        --card-rule: #6f8fb8;
+        --accent: #9a4a0c;
+        --listening: #f6c76b;
+        --error: #a4271b;
+        --ok: #3f7652;
+        --focus: #9a4a0c;
+        --serif: "Newsreader", Georgia, "Times New Roman", serif;
+        --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        --radius: 6px;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --paper: #171613;
+          --sheet: #23211d;
+          --ink: #ece5d6;
+          --muted: #b3aa98;
+          --rule: #3a362f;
+          --margin-line: #6e4339;
+          --card: #2c2a25;
+          --card-rule: #7d98bd;
+          --accent: #f2a65a;
+          --listening: #f6c76b;
+          --error: #ff9a8a;
+          --ok: #8cc29b;
+          --focus: #f2a65a;
+        }
       }
 
       * { box-sizing: border-box; }
 
-      html, body {
-        margin: 0;
-        min-height: 100%;
-        background: radial-gradient(circle at top, #111b2d 0%, var(--bg) 52%);
-        color: var(--text);
-        font-family: "Segoe UI", Tahoma, sans-serif;
-      }
+      html, body { margin: 0; height: 100%; }
 
       body {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 32px 16px;
+        background: var(--paper);
+        color: var(--ink);
+        font: 16px/1.5 var(--sans);
       }
 
-      .app {
-        width: min(900px, 100%);
-        min-height: 700px;
-        background: rgba(12, 18, 28, 0.8);
-        border: 1px solid rgba(255, 255, 255, 0.12);
-        border-radius: 20px;
-        box-shadow: 0 22px 60px var(--shadow);
-        overflow: hidden;
+      .page {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        width: min(760px, 100%);
+        height: 100vh;
+        height: 100dvh; /* mobile: excludes the browser toolbar */
+        margin: 0 auto;
+        padding: 24px 16px 16px;
       }
 
-      .topbar {
+      /* ── masthead ─────────────────────────────────────────── */
+      .masthead {
         display: flex;
-        align-items: center;
+        align-items: flex-end;
         justify-content: space-between;
         gap: 16px;
-        background: rgba(13, 18, 28, 0.9);
-        border-bottom: 1px solid rgba(255, 255, 255, 0.12);
-        padding: 16px 18px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid var(--rule);
       }
 
-      .brand {
-        display: inline-flex;
-        align-items: center;
-        gap: 10px;
-        font-size: 1.15rem;
-        font-weight: 700;
-        letter-spacing: 0.04em;
+      .wordmark { display: flex; align-items: center; gap: 12px; }
+      .wordmark svg { width: 34px; height: 34px; flex: none; color: var(--accent); }
+
+      h1 {
+        margin: 0;
+        font: 600 1.75rem/1.1 var(--serif);
+        letter-spacing: -0.01em;
       }
 
-      .brand-mark {
-        width: 10px;
-        height: 10px;
-        border-radius: 50%;
-        background: linear-gradient(135deg, var(--accent), var(--accent-2));
-        box-shadow: 0 0 16px rgba(142, 197, 255, 0.9);
-      }
+      .tagline { margin: 2px 0 0; color: var(--muted); font-size: 0.875rem; }
 
       .status {
         display: inline-flex;
         align-items: center;
         gap: 8px;
-        padding: 7px 12px;
-        border-radius: 999px;
-        background: rgba(255, 255, 255, 0.04);
-        border: 1px solid rgba(255, 255, 255, 0.08);
+        margin: 0;
         color: var(--muted);
-        font-size: 0.78rem;
+        font-size: 0.875rem;
+        white-space: nowrap;
       }
 
       .status-dot {
         width: 8px;
         height: 8px;
-        border-radius: 50%;
-        background: #7ae0a6;
-        box-shadow: 0 0 12px rgba(122, 224, 166, 0.9);
+        border-radius: 2px;
+        background: var(--ok);
       }
 
-      .chat {
-        display: flex;
-        flex-direction: column;
-        height: 640px;
-      }
+      .status[data-state="busy"] .status-dot { background: var(--accent); }
+      .status[data-state="error"] { color: var(--error); }
+      .status[data-state="error"] .status-dot { background: var(--error); }
 
-      .messages {
+      /* ── the sheet: ruled paper with a margin line ────────── */
+      .sheet {
         flex: 1;
+        min-height: 0;
         overflow-y: auto;
-        padding: 18px 18px 8px;
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-        background: rgba(8, 12, 18, 0.4);
+        padding: 20px 20px 20px 76px;
+        border: 1px solid var(--rule);
+        border-radius: var(--radius);
+        background:
+          linear-gradient(to right, transparent 55px, var(--margin-line) 55px, var(--margin-line) 56px, transparent 56px),
+          var(--sheet);
+        scroll-behavior: smooth;
+      }
+
+      .turn { margin: 0 0 20px; }
+      .turn:last-child { margin-bottom: 0; }
+
+      .who {
+        display: block;
+        margin-bottom: 2px;
+        color: var(--muted);
+        font-size: 0.75rem;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
       }
 
       .message {
-        max-width: min(75%, 560px);
-        padding: 12px 16px;
-        border-radius: 16px;
-        line-height: 1.5;
+        margin: 0;
         white-space: pre-wrap;
-        word-break: break-word;
+        overflow-wrap: anywhere;
       }
 
-      .message.user {
-        align-self: flex-end;
-        background: linear-gradient(135deg, rgba(104, 159, 255, 0.9), rgba(128, 211, 249, 0.72));
-        color: #05131a;
-        border-bottom-right-radius: 6px;
+      /* Encore writes like a tutor's note: serif, no bubble */
+      .turn.bot .message {
+        max-width: 60ch;
+        font: 1.125rem/1.55 var(--serif);
       }
 
-      .message.bot {
-        align-self: flex-start;
-        background: rgba(255, 255, 255, 0.04);
-        border: 1px solid rgba(255, 255, 255, 0.07);
-        color: var(--text);
-        border-bottom-left-radius: 6px;
+      .turn.bot.is-error .message { color: var(--error); }
+
+      /* what you said sits on an index card */
+      .turn.user { display: flex; flex-direction: column; align-items: flex-end; }
+
+      .turn.user .message {
+        max-width: min(46ch, 100%);
+        padding: 10px 14px;
+        border: 1px solid var(--rule);
+        border-top: 3px solid var(--card-rule);
+        border-radius: 2px;
+        background: var(--card);
+        box-shadow: 0 1px 2px rgba(31, 42, 55, 0.06);
       }
 
-      .composer {
-        display: flex;
-        gap: 12px;
-        align-items: center;
-        padding: 18px;
-        background: rgba(11, 17, 27, 0.82);
-        border-top: 1px solid rgba(255, 255, 255, 0.08);
+      .thinking { margin: 0; color: var(--muted); font: italic 1.0625rem/1.55 var(--serif); }
+      .thinking .dots::after { content: "…"; }
+      .thinking .hint { display: block; font: 0.8125rem/1.4 var(--sans); font-style: normal; }
+
+      /* ── the desk: controls ───────────────────────────────── */
+      .composer { display: flex; align-items: flex-end; gap: 12px; }
+
+      .field { flex: 1; min-width: 0; }
+
+      .field label {
+        display: block;
+        margin: 0 0 4px 2px;
+        color: var(--muted);
+        font-size: 0.8125rem;
       }
 
       textarea {
-        flex: 1;
-        min-height: 54px;
+        display: block;
+        width: 100%;
+        min-height: 48px;
         max-height: 160px;
+        padding: 12px 14px;
         resize: vertical;
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        border-radius: 14px;
-        background: rgba(255, 255, 255, 0.03);
-        color: var(--text);
-        padding: 14px 16px;
+        border: 1px solid var(--rule);
+        border-radius: var(--radius);
+        background: var(--sheet);
+        color: var(--ink);
         font: inherit;
       }
 
-      textarea:focus {
-        outline: 2px solid rgba(142, 197, 255, 0.8);
-        border-color: rgba(142, 197, 255, 0.8);
-      }
+      textarea::placeholder { color: var(--muted); opacity: 1; }
 
       button {
-        border: 0;
-        border-radius: 12px;
-        color: #09131d;
-        background: linear-gradient(135deg, var(--accent-2), var(--accent));
-        font: inherit;
-        font-weight: 700;
+        min-height: 48px;
+        border-radius: var(--radius);
+        font: 600 1rem/1 var(--sans);
         cursor: pointer;
-        transition: transform 0.15s ease, opacity 0.15s ease;
+        transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
       }
 
-      button:hover { transform: translateY(-1px); }
-      button:disabled { opacity: 0.55; cursor: not-allowed; }
+      button:disabled { cursor: not-allowed; opacity: 0.55; }
 
-      .primary-btn {
-        min-width: 110px;
-        min-height: 54px;
-        padding: 0 18px;
+      :is(button, textarea):focus-visible {
+        outline: 3px solid var(--focus);
+        outline-offset: 2px;
       }
 
-      .mic-btn {
-        width: 54px;
-        height: 54px;
-        font-size: 1.2rem;
+      .mic {
         display: inline-flex;
         align-items: center;
-        justify-content: center;
-        background: rgba(255, 255, 255, 0.08);
-        color: var(--text);
-        border: 1px solid rgba(255, 255, 255, 0.08);
+        gap: 8px;
+        padding: 0 18px;
+        border: 1px solid var(--ink);
+        background: var(--ink);
+        color: var(--sheet);
       }
 
-      .mic-btn.listening {
-        background: linear-gradient(135deg, rgba(255, 127, 127, 0.85), rgba(255, 174, 78, 0.8));
-        color: #170407;
+      .mic svg { width: 20px; height: 20px; }
+
+      .mic[aria-pressed="true"] {
+        border-color: var(--ink);
+        background: var(--listening);
+        color: #1f2a37;
       }
 
-      .error {
-        color: var(--error);
-        font-weight: 600;
+      .mic[aria-pressed="true"] svg { animation: pulse 1.2s ease-in-out infinite; }
+
+      @keyframes pulse { 50% { opacity: 0.35; } }
+
+      .send {
+        padding: 0 18px;
+        border: 1px solid var(--ink);
+        background: transparent;
+        color: var(--ink);
       }
 
-      @media (max-width: 640px) {
-        .app { min-height: 100vh; border-radius: 0; }
-        .chat { height: calc(100vh - 86px); }
+      @media (hover: hover) { .send:hover:not(:disabled) { background: var(--rule); } }
+
+      .try {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 4px 8px;
+        margin: 10px 0 0;
+        color: var(--muted);
+        font-size: 0.875rem;
+      }
+
+      .try button {
+        min-height: 44px;
+        padding: 0 10px;
+        border: 1px dashed var(--rule);
+        background: transparent;
+        color: var(--accent);
+        font: 500 0.9375rem/1 var(--serif);
+      }
+
+      @media (hover: hover) { .try button:hover:not(:disabled) { border-style: solid; border-color: var(--accent); } }
+
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        margin: -1px;
+        padding: 0;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
+
+      @media (max-width: 560px) {
+        .page { padding: 16px 12px 12px; gap: 12px; }
+        .tagline { display: none; }
+        .sheet {
+          padding-left: 44px;
+          background:
+            linear-gradient(to right, transparent 31px, var(--margin-line) 31px, var(--margin-line) 32px, transparent 32px),
+            var(--sheet);
+        }
         .composer { flex-wrap: wrap; }
-        .primary-btn { flex: 1; }
+        .field { flex-basis: 100%; order: -1; }
+        .mic, .send { flex: 1; justify-content: center; }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .sheet { scroll-behavior: auto; }
+        .mic[aria-pressed="true"] svg { animation: none; }
+        button { transition: none; }
       }
     </style>
   </head>
   <body>
-    <main class="app">
-      <header class="topbar">
-        <div class="brand">
-          <span class="brand-mark"></span>
-          <span>Encore</span>
+    <main class="page">
+      <header class="masthead">
+        <div class="wordmark">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+            <rect x="3" y="5" width="18" height="14" rx="1.5" />
+            <path d="M3 9h18M7 13h10M7 16h6" />
+          </svg>
+          <div>
+            <h1>Encore</h1>
+            <p class="tagline">Say what you studied. It quizzes you until it sticks.</p>
+          </div>
         </div>
-        <div class="status"><span class="status-dot"></span> Ready</div>
+        <p class="status" role="status"><span class="status-dot" aria-hidden="true"></span><span class="status-text">Ready</span></p>
       </header>
 
-      <section class="chat">
-        <div class="messages" id="messages" aria-live="polite"></div>
+      <section class="sheet" id="messages" role="log" aria-live="polite" aria-label="Conversation"></section>
+
+      <footer>
         <div class="composer">
-          <button class="mic-btn" type="button" id="micBtn" aria-label="Toggle microphone">🎤</button>
-          <textarea id="input" rows="1" placeholder="Ask Encore what you studied..."></textarea>
-          <button class="primary-btn" type="button" id="sendBtn">Send</button>
+          <button class="mic" type="button" id="micBtn" aria-pressed="false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+              <rect x="9" y="3" width="6" height="11" rx="3" />
+              <path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M8.5 21h7" />
+            </svg>
+            <span class="mic-label">Speak</span><span class="sr-only"> (toggle microphone)</span>
+          </button>
+          <div class="field">
+            <label for="input">Or type it</label>
+            <textarea id="input" rows="1" placeholder="I studied photosynthesis today…"></textarea>
+          </div>
+          <button class="send" type="button" id="sendBtn">Send</button>
         </div>
-      </section>
+        <p class="try">
+          Try saying
+          <button type="button" data-say="Quiz me">“Quiz me”</button>
+          <button type="button" data-say="What am I studying?">“What am I studying?”</button>
+          <button type="button" data-say="How am I doing?">“How am I doing?”</button>
+        </p>
+      </footer>
     </main>
 
     <script>
@@ -233,22 +342,63 @@
       const inputEl = document.getElementById('input');
       const sendBtn = document.getElementById('sendBtn');
       const micBtn = document.getElementById('micBtn');
+      const micLabel = micBtn.querySelector('.mic-label');
       const statusEl = document.querySelector('.status');
+      const statusText = statusEl.querySelector('.status-text');
+      const tryButtons = document.querySelectorAll('.try button');
 
       let conversationId = null;
       let isListening = false;
       let recognition = null;
 
-      function setStatus(text, isOk = true) {
-        statusEl.innerHTML = `${isOk ? '<span class="status-dot"></span>' : '<span class="status-dot" style="background:#ff7f7f"></span>'}${text}`;
+      function setStatus(text, isOk = true, busy = false) {
+        statusText.textContent = text;
+        statusEl.dataset.state = !isOk ? 'error' : busy ? 'busy' : 'ok';
       }
 
-      function appendMessage(role, text) {
-        const div = document.createElement('div');
-        div.className = `message ${role}`;
-        div.textContent = text;
-        messagesEl.appendChild(div);
+      function setBusy(busy) {
+        sendBtn.disabled = busy;
+        tryButtons.forEach((button) => { button.disabled = busy; });
+      }
+
+      function addTurn(role) {
+        const turn = document.createElement('div');
+        turn.className = `turn ${role}`;
+        const who = document.createElement('span');
+        who.className = 'who';
+        who.textContent = role === 'bot' ? 'Encore' : 'You';
+        turn.append(who);
+        messagesEl.appendChild(turn);
+        return turn;
+      }
+
+      function appendMessage(role, text, isError = false) {
+        const turn = addTurn(role);
+        turn.classList.toggle('is-error', isError);
+        const message = document.createElement('p');
+        message.className = `message ${role}`;
+        message.textContent = text;
+        turn.append(message);
         messagesEl.scrollTop = messagesEl.scrollHeight;
+      }
+
+      // Replies can take 15-30 s on a free model tier: say so instead of leaving a silent wait.
+      function showThinking() {
+        const turn = addTurn('pending');
+        turn.querySelector('.who').textContent = 'Encore';
+        const note = document.createElement('p');
+        note.className = 'thinking';
+        note.innerHTML = 'Thinking<span class="dots"></span>';
+        turn.append(note);
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+        const timer = setTimeout(() => {
+          const hint = document.createElement('span');
+          hint.className = 'hint';
+          hint.textContent = 'Still working. This can take up to half a minute.';
+          note.append(hint);
+          messagesEl.scrollTop = messagesEl.scrollHeight;
+        }, 6000);
+        return () => { clearTimeout(timer); turn.remove(); };
       }
 
       function getPayloadText() {
@@ -263,8 +413,9 @@
 
         window.speechSynthesis?.cancel();
         appendMessage('user', message);
-        setStatus('Thinking…', true);
-        sendBtn.disabled = true;
+        setStatus('Thinking…', true, true);
+        setBusy(true);
+        const hideThinking = showThinking();
 
         try {
           const response = await fetch('/api/chat', {
@@ -279,17 +430,19 @@
           }
 
           conversationId = data.conversation_id;
+          hideThinking();
           appendMessage('bot', data.reply);
           setStatus('Ready', true);
           speakReply(data.reply);
         } catch (error) {
+          hideThinking();
           const text = error instanceof TypeError // fetch itself failed: the web app is not running
             ? "I can't reach Encore. Make sure the web app is running."
             : error.message;
-          appendMessage('bot', `Sorry — ${text}`);
-          setStatus('Error', false);
+          appendMessage('bot', `Sorry — ${text}`, true);
+          setStatus('Something went wrong', false);
         } finally {
-          sendBtn.disabled = false;
+          setBusy(false);
         }
       }
 
@@ -300,21 +453,34 @@
 
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.lang = 'en-US';
-        utterance.onstart = () => setStatus('Speaking…', true);
-        utterance.onend = () => setStatus('Ready', true);
-        utterance.onerror = () => setStatus('Voice output unavailable', false);
+        // sendMessage cancels speech, which fires onerror('interrupted') on this utterance;
+        // never let a stale speech event overwrite the status of the turn now in progress
+        const idle = () => !sendBtn.disabled;
+        utterance.onstart = () => { if (idle()) setStatus('Speaking…', true, true); };
+        utterance.onend = () => { if (idle()) setStatus('Ready', true); };
+        utterance.onerror = (event) => {
+          if (event.error === 'interrupted' || event.error === 'canceled' || !idle()) return;
+          setStatus('Voice output unavailable', false);
+        };
         window.speechSynthesis.speak(utterance);
       }
 
       sendBtn.addEventListener('click', () => sendMessage(getPayloadText()));
       inputEl.addEventListener('keydown', (event) => {
-        if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
-          sendMessage(getPayloadText());
-        } else if (event.key === 'Enter' && !event.shiftKey) {
+        if (event.key === 'Enter' && !event.shiftKey) {
           event.preventDefault();
           sendMessage(getPayloadText());
         }
       });
+      tryButtons.forEach((button) => {
+        button.addEventListener('click', () => sendMessage(button.dataset.say));
+      });
+
+      function setListening(listening) {
+        isListening = listening;
+        micBtn.setAttribute('aria-pressed', String(listening));
+        micLabel.textContent = listening ? 'Listening' : 'Speak';
+      }
 
       function initSpeechRecognition() {
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -328,15 +494,13 @@
         recognitionInstance.interimResults = false;
 
         recognitionInstance.onstart = () => {
-          isListening = true;
-          micBtn.classList.add('listening');
-          setStatus('Listening…', true);
+          setListening(true);
+          setStatus('Listening…', true, true);
         };
 
         let voiceError = false;
         recognitionInstance.onend = () => {
-          isListening = false;
-          micBtn.classList.remove('listening');
+          setListening(false);
           if (!voiceError) setStatus('Ready', true); // keep the error visible
           voiceError = false;
         };
@@ -373,8 +537,16 @@
         recognition.start();
       });
 
-      appendMessage('bot', 'Hi! Tell me what you studied, and I\'ll turn it into flashcards and quiz you.');
+      appendMessage('bot', "Hi! Tell me what you studied, and I'll turn it into flashcards and quiz you.");
       inputEl.focus();
+
+      // Web font after load: offline or slow networks must never block the page (Georgia until then).
+      window.addEventListener('load', () => {
+        const font = document.createElement('link');
+        font.rel = 'stylesheet';
+        font.href = 'https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&display=swap';
+        document.head.append(font);
+      });
     </script>
   </body>
 </html>
