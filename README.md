@@ -11,36 +11,41 @@ Work split: [TASKS.md](TASKS.md). Workflow: [CONTRIBUTING.md](CONTRIBUTING.md).
 python -m venv .venv
 .venv\Scripts\activate          # Windows; macOS/Linux: source .venv/bin/activate
 pip install -r requirements.txt
-python tests/test_core.py        # unit tests, prints "ok"
-python -m pytest tests/test_generate.py -v  # Bedrock card-gen tests (no AWS needed)
-python tests/test_integration.py # starts the server, calls every tool over HTTP, prints "ok"
-python server.py                 # MCP server at http://127.0.0.1:8000/mcp
+copy .env.example .env           # macOS/Linux: cp; then fill in an LLM (below)
 ```
-`ENCORE_PORT` changes the port (default 8000).
+In `.env`, set `GEMINI_API_KEY` (a free key from [Google AI Studio](https://aistudio.google.com)).
+That's the only key needed. Encore also has an Amazon Bedrock path (`LLM_PROVIDER=bedrock`,
+AWS keys and `BEDROCK_MODEL_ID`), but we couldn't run it live: our new AWS account was never
+cleared for Bedrock (see `docs/FEEDBACK.md`), so it's covered only by mocked tests.
 
-Copy `.env.example` to `.env` and fill in AWS credentials for Bedrock.
-The flashcard MCP App HTML is included in the repository. To rebuild it after
-changing `mcp_apps/flashcards.ts`, use Node.js 20+:
+Start both processes, each in its own terminal:
 ```bash
-npm ci
-npm run build:mcp-app
+python server.py                 # MCP server at http://127.0.0.1:8000/mcp
+python -m web.app                # voice app at http://127.0.0.1:5000
 ```
+`ENCORE_PORT` changes the MCP server port (default 8000).
 
-Run the browser voice-flow tests after `npm ci`, with
-`npx playwright install chromium` and `npm run test:e2e`.
-Copy `.env.example` to `.env` and fill in AWS credentials.
-`BEDROCK_MODEL_ID` defaults to `amazon.nova-lite-v1:0`; change it if needed.
+## Test
+```bash
+python tests/test_core.py                    # unit tests, prints "ok"
+python tests/test_integration.py             # starts the server, calls every tool over HTTP
+python tests/test_web.py                     # agent loop with mocked model + MCP
+python -m unittest tests/test_generate.py    # card generation with a mocked Bedrock client
+npm ci && npx playwright install chromium && npm run test:e2e   # browser voice flow
+```
+No test calls a real model. `LLM_PROVIDER=none` also runs card generation offline
+(cards come from `question? answer` lines); the web agent still needs a model.
 
-No AWS access? Set `LLM_PROVIDER=gemini` and `GEMINI_API_KEY` (free key from
-[Google AI Studio](https://aistudio.google.com)) to use Gemini instead of Bedrock.
-`LLM_PROVIDER=none` skips the LLM in card generation (cards come from `question? answer` lines); the web agent still needs bedrock or gemini.
+The flashcard MCP App HTML is included in the repository. To rebuild it after
+changing `mcp_apps/flashcards.ts`, use Node.js 20+: `npm ci && npm run build:mcp-app`.
 
 ## Layout
 | Path | What |
 |---|---|
 | `server.py` | MCP server and tools |
 | `db.py`, `srs.py` | Card storage and spaced repetition |
-| `generate.py` | Notes to flashcards (Bedrock); chunking + retry |
+| `generate.py` | Notes to flashcards (Gemini, optional Bedrock); chunking + retry |
+| `gemini.py` | Minimal Gemini REST client (stdlib only) |
 | `ingest.py` | Extract text from PDF / VTT / SRT / plain-text files |
 | `web/` | Simulated Alexa+ voice client |
 | `mcp_apps/` | MCP Apps flashcard UI source and bundled resource |

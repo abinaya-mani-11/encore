@@ -3,27 +3,31 @@
 **Name:** Encore
 **Pitch:** Tell Alexa+ what you studied today. Encore turns it into flashcards and quizzes you by voice on a spaced schedule, picking up where you left off every session.
 **Problem:** Students forget most of what they hear within days, and nobody has time to turn notes into review material.
-**Track:** Alexa+ (simulated Alexa+ experience + self-hosted MCP server). **Mini challenges:** AWS Builder, Open Source.
+**Track:** Alexa+ (simulated Alexa+ experience + self-hosted MCP server). **Mini challenge:** Open Source.
+**Built with:** Python, MCP Python SDK 2.x (Streamable HTTP, MCP Apps), SQLite, Gemini API, Starlette, Web Speech API, TypeScript, Playwright.
 
 ## Text description
 **Inspiration.** Students forget most of a lecture within days. Spaced repetition fixes that, but making flashcards takes time nobody has. With Alexa+ you can just say what you learned.
 
-**What it does.** Tell Encore what you studied, by speaking or pasting notes. Encore turns it into flashcards, then quizzes you by voice: it asks a question, you answer out loud, it judges your answer and tells you when that card comes back. Browser speech recognition turns speech into text, and speech synthesis reads Encore's replies aloud; typed input remains available. Cards you miss return tomorrow; cards you know return in 3, 7, then 14 days. Progress persists, so every session picks up where the last one ended. You can quiz one topic ("quiz me on photosynthesis"), list topics, view cards in an interactive MCP App, and delete them.
+**What it does.** Tell Encore what you studied, by speaking or pasting notes. Encore turns it into flashcards, then quizzes you by voice: it asks a question, you answer out loud, it judges your answer and tells you when that card comes back. Cards you miss return tomorrow; cards you know return in 3, 7, then 14 days. Progress persists, so every session picks up where the last one ended. You can quiz one topic ("quiz me on photosynthesis"), ask how you're doing, list topics, delete one, and view your cards in an interactive MCP App. Typing works too, for when you can't talk.
 
-**How we built it.** A self-hosted MCP server (Python, official MCP SDK 2.x, Streamable HTTP, spec 2025-11-25) exposes tools for adding notes, reviewing and grading cards, checking progress, listing and deleting topics, and viewing saved flashcards. State lives in SQLite with a Leitner spaced-repetition schedule. Amazon Bedrock generates flashcards. A web app simulates Alexa+: browser speech recognition and synthesis, plus a Bedrock agent loop that connects to the server as an MCP client and calls the tools. The flashcard view is served as a `ui://` MCP App resource, with a text response for clients that do not support Apps.
+**How we built it.** A self-hosted MCP server (Python, official MCP SDK 2.x, Streamable HTTP, spec 2025-11-25) exposes seven tools: add notes, get the next card, grade it, check progress, list and delete topics, and view flashcards. State lives in SQLite with a Leitner spaced-repetition schedule, so it survives restarts and sessions. Gemini turns notes into flashcards and runs the conversation. A web app simulates Alexa+: browser speech recognition and synthesis, plus an agent loop that connects to the server as a real MCP client (initialize, tools/list, tools/call) and lets the model call the tools. Every tool result includes a sentence that reads naturally aloud. The flashcard view is a `ui://` MCP App resource, with a plain-text result for clients that don't support Apps. Because it's a standard MCP server, the same server also works unchanged in other MCP clients such as Claude Code.
 
-**Challenges.** The MCP Python SDK's v2 APIs differ from many older examples, so the server and its MCP Apps extension had to be integrated against the installed SDK rather than copying legacy `FastMCP` patterns. The browser also needs separate fallbacks for speech recognition, speech synthesis, and typed input.
-**Accomplishments.** Encore has a browser-based voice/text simulator, a Bedrock-powered MCP tool-calling loop, persistent spaced-repetition state, and an interactive flashcard view registered as an MCP App.
-**What we learned.** MCP tool results can serve both conversational clients and richer app views: a spoken text result keeps the tool useful without UI support, while structured content feeds the flashcard app. Speech input and output are independent browser capabilities, so the text experience remains important.
-**What's next.** Real Alexa+ integration, importing lecture recordings and PDFs, and shared decks for study groups.
+**Challenges.** Our new AWS account was never cleared for Amazon Bedrock (every call returned "Operation not allowed"; other regions said the account was still being verified), so with a week to go we added a provider switch and moved to Gemini's free tier. The free tier was often overloaded or slow, so we added retries, picked the fastest model, turned its thinking down, and made the UI explain long waits. The MCP SDK's v2 API also differs from most tutorials (`FastMCP` is now `MCPServer`).
+
+**Accomplishments.** It remembers: cards, schedule and progress persist across sessions, which turns a one-off Q&A bot into a study habit. The MCP server works with any MCP client, not just our simulator. The voice simulator, the MCP App view and the server are covered by unit, integration and browser tests that run in CI on every pull request.
+
+**What we learned.** Writing every tool result as a sentence that can be read aloud makes the agent's job easy: it just reads the result instead of turning data into prose. Tool results can serve both a voice conversation (text) and a richer view (structured content for the MCP App) at once. And speech input and output are separate browser capabilities, so a typed fallback matters.
+
+**What's next.** Real Alexa+ integration once add-on tooling opens up, importing lecture PDFs and transcripts (`ingest.py` already extracts their text), and shared decks for study groups.
 
 ## Demo video script (under 3:00, best part first)
 - 0:00-0:20 Problem, then "Encore: a voice study coach for Alexa+"
-- 0:20-1:00 Speak your notes, flashcards get created (Bedrock)
-- 1:00-2:00 Voice quiz: question, spoken answer, graded, next card
-- 2:00-2:30 Next session: progress and schedule persisted
-- 2:30-2:45 Open the interactive MCP App flashcard view
-- 2:45-3:00 Architecture in one shot (MCP server over Streamable HTTP, Bedrock), impact
+- 0:20-1:00 Speak your notes, flashcards get created
+- 1:00-2:00 Voice quiz: question, spoken answer, graded, "comes back tomorrow"
+- 2:00-2:30 Next session: "How am I doing?" shows progress and schedule persisted
+- 2:30-2:45 Same MCP server in another AI app (Claude Code): the FAQ calls this a bonus
+- 2:45-3:00 Architecture in one shot (MCP server over Streamable HTTP, SQLite, Gemini), impact
 
 ## Checklist
 - [x] Text description: features and how it works
@@ -31,7 +35,6 @@
 - [ ] Setup and run instructions work from a clean clone
 - [ ] Simulator source is in the repo; MCP server (spec 2025-11-25, Streamable HTTP) shown running
 - [ ] Demo video: YouTube or Vimeo, public, under 3 minutes, English, no copyrighted music
-- [ ] Product feedback for every tool used (see FEEDBACK.md)
-- [ ] AWS Builder: describe Bedrock usage in the feedback answer
+- [x] Product feedback for every tool used (see FEEDBACK.md)
 - [ ] Open Source: contribution URL, repo URL, GitHub username, what/how/why
-- [ ] Optional: feature requests and friction log
+- [x] Optional: feature requests and friction log

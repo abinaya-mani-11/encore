@@ -1,4 +1,4 @@
-"""Web host for Encore's Bedrock-backed Alexa+ simulator."""
+"""Web host for Encore's Alexa+ simulator (Gemini by default, or Amazon Bedrock)."""
 
 from __future__ import annotations
 
@@ -35,7 +35,7 @@ MCP_SERVER_URL = os.getenv(
     "MCP_SERVER_URL",
     f"http://127.0.0.1:{os.getenv('ENCORE_PORT', '8000')}/mcp",
 )
-LLM_PROVIDER = os.getenv("LLM_PROVIDER", "bedrock")  # or "gemini"
+LLM_PROVIDER = os.getenv("LLM_PROVIDER", "gemini")  # or "bedrock"
 BEDROCK_MODEL_ID = os.getenv("BEDROCK_MODEL_ID", "")
 BEDROCK_REGION = os.getenv("AWS_REGION", "us-east-1")
 MAX_TOOL_ROUNDS = 8
@@ -60,6 +60,16 @@ _conversations_lock = asyncio.Lock()
 
 class AgentLoopLimitError(RuntimeError):
     """Raised when the model keeps requesting tools without producing a reply."""
+
+
+class SetupError(RuntimeError):
+    """The model isn't configured; the message tells the person running Encore what to set."""
+
+
+def _setup_problem() -> str | None:
+    if LLM_PROVIDER == "bedrock":
+        return None if BEDROCK_MODEL_ID else "Encore isn't set up yet: set BEDROCK_MODEL_ID in .env, then restart the web app."
+    return None if os.getenv("GEMINI_API_KEY") else "Encore isn't set up yet: add GEMINI_API_KEY to .env, then restart the web app."
 
 
 def _tool_specs(tools: list[Any]) -> list[dict[str, Any]]:
@@ -147,13 +157,13 @@ async def run_agent(
 
 
 async def _run_agent(messages: list[dict[str, Any]], bedrock_client: Any | None, mcp_server_url: str) -> str:
-    if LLM_PROVIDER == "gemini":
-        converse = _gemini_converse
-    else:
-        if not BEDROCK_MODEL_ID:
-            raise RuntimeError("BEDROCK_MODEL_ID is not configured.")
+    if problem := _setup_problem():
+        raise SetupError(problem)
+    if LLM_PROVIDER == "bedrock":
         client = bedrock_client or boto3.client("bedrock-runtime", region_name=BEDROCK_REGION)
         converse = partial(client.converse, modelId=BEDROCK_MODEL_ID)
+    else:
+        converse = _gemini_converse
 
     async with streamable_http_client(mcp_server_url) as (read_stream, write_stream):
         async with ClientSession(read_stream, write_stream) as session:
@@ -181,11 +191,11 @@ async def _run_agent(messages: list[dict[str, Any]], bedrock_client: Any | None,
                 if response.get("stopReason") != "tool_use":
                     reply = _text_from_message(message)
                     if not reply:
-                        raise RuntimeError("Bedrock returned no reply text.")
+                        raise RuntimeError("The model returned no reply text.")
                     return reply
 
                 if not tool_uses:
-                    raise RuntimeError("Bedrock requested tools but returned no tool calls.")
+                    raise RuntimeError("The model requested tools but returned no tool calls.")
 
                 tool_results = []
                 for tool_use in tool_uses:
@@ -203,12 +213,14 @@ async def _run_agent(messages: list[dict[str, Any]], bedrock_client: Any | None,
 
                 messages.append({"role": "user", "content": tool_results})
 
-    raise AgentLoopLimitError(f"Bedrock requested tools more than {MAX_TOOL_ROUNDS} times.")
+    raise AgentLoopLimitError(f"The model requested tools more than {MAX_TOOL_ROUNDS} times.")
 
 
 async def _conversation(conversation_id: str | None) -> tuple[str, list[dict[str, Any]], asyncio.Lock]:
     async with _conversations_lock:
-        if conversation_id is None:
+        # an unknown id means this process restarted (history is in memory): start fresh
+        # instead of failing every later turn from a page that's still open
+        if conversation_id is None or conversation_id not in _conversations:
             conversation_id = str(uuid4())
             _conversations[conversation_id] = []
             _conversation_locks[conversation_id] = asyncio.Lock()
@@ -216,8 +228,6 @@ async def _conversation(conversation_id: str | None) -> tuple[str, list[dict[str
                 oldest_id = next(iter(_conversations))
                 _conversations.pop(oldest_id)
                 _conversation_locks.pop(oldest_id)
-        elif conversation_id not in _conversations:
-            raise KeyError("Conversation not found. Start a new conversation.")
         return conversation_id, _conversations[conversation_id], _conversation_locks[conversation_id]
 
 
@@ -247,15 +257,14 @@ async def chat(request: Request) -> JSONResponse:
     conversation_id = payload.get("conversation_id")
     if conversation_id is not None and not isinstance(conversation_id, str):
         return JSONResponse({"error": "The conversation id is invalid."}, status_code=400)
-    try:
-        conversation_id, messages, lock = await _conversation(conversation_id)
-    except KeyError as error:
-        return JSONResponse({"error": str(error.args[0])}, status_code=404)
+    conversation_id, messages, lock = await _conversation(conversation_id)
 
     async with lock:
         turn_messages = [*messages, {"role": "user", "content": [{"text": text.strip()}]}]
         try:
             reply = await run_agent(turn_messages)
+        except SetupError as error:
+            return JSONResponse({"error": str(error)}, status_code=503)
         except (BotoCoreError, MCPError, AgentLoopLimitError, TimeoutError, OSError) as error:
             logger.exception("Encore agent request failed: %s", error)
             return JSONResponse(
@@ -292,6 +301,8 @@ def _mcp_server_up() -> bool:
 
 @asynccontextmanager
 async def lifespan(_: Starlette):
+    if problem := _setup_problem():
+        logger.warning(problem)
     if not await anyio.to_thread.run_sync(_mcp_server_up):
         logger.warning("No MCP server at %s. Start it first: python server.py", MCP_SERVER_URL)
     yield

@@ -18,7 +18,7 @@ import db  # noqa: E402
 from generate import make_cards  # noqa: E402
 
 log = logging.getLogger("encore")
-MAX_TEXT = 20_000  # ponytail: hard cap keeps one Bedrock call cheap; raise once generate.py chunks
+MAX_TEXT = 20_000  # ponytail: generate.py chunks at 3k chars, so this caps one add at ~7 LLM calls
 FLASHCARDS_URI = "ui://encore/flashcards.html"
 
 apps = Apps()
@@ -41,7 +41,7 @@ apps.add_html_resource(
 def view_flashcards(title: str = "") -> types.CallToolResult:
     cards = db.flashcards(title)
     label = f" for {title.strip()}" if title.strip() else ""
-    message = f"Showing {len(cards)} flashcards{label}." if cards else f"No flashcards found{label}."
+    message = f"Showing {_n(len(cards), 'flashcard')}{label}." if cards else f"No flashcards found{label}."
     return types.CallToolResult(
         content=[types.TextContent(type="text", text=message)],
         structured_content={"cards": cards, "message": message, "title": title.strip()},
@@ -64,22 +64,25 @@ mcp = MCPServer(
 
 
 def _root_page() -> str:
+    # no redirect: /mcp only answers MCP clients, so a browser landing there sees an error
     return """<!doctype html>
-<html lang=\"en\">
+<html lang="en">
   <head>
-    <meta charset=\"utf-8\" />
-    <meta http-equiv=\"refresh\" content=\"0; url=/mcp\" />
-    <title>Encore MCP</title>
+    <meta charset="utf-8" />
+    <title>Encore MCP server</title>
     <style>
-      body { font-family: sans-serif; background: #0f172a; color: #e2e8f0; display: grid; place-items: center; height: 100vh; margin: 0; }
-      a { color: #7dd3fc; }
+      body { font-family: system-ui, sans-serif; background: #f6f1e7; color: #1f2a37; display: grid; place-items: center; min-height: 100vh; margin: 0; padding: 16px; }
+      main { max-width: 520px; line-height: 1.6; }
+      code { background: #ebe3d3; padding: 1px 6px; border-radius: 4px; }
     </style>
   </head>
   <body>
-    <div>
-      <h1>Encore MCP server</h1>
-      <p>Redirecting to <a href=\"/mcp\">/mcp</a>…</p>
-    </div>
+    <main>
+      <h1>Encore MCP server is running</h1>
+      <p>Connect an MCP client (Streamable HTTP) to <code>/mcp</code> on this host.</p>
+      <p>The voice app runs separately: <code>python -m web.app</code>, then open
+      <code>http://127.0.0.1:5000</code>.</p>
+    </main>
   </body>
 </html>"""
 
@@ -87,6 +90,11 @@ def _root_page() -> str:
 @mcp.custom_route(path="/", methods=["GET"])  # type: ignore[attr-defined]
 def root_route(_: object) -> HTMLResponse:
     return HTMLResponse(_root_page())
+
+
+def _n(count: int, word: str) -> str:
+    """'1 card', '2 cards': these sentences are read aloud."""
+    return f"{count} {word}{'' if count == 1 else 's'}"
 
 
 def _when(due: str) -> str:
@@ -111,7 +119,9 @@ def add_material(title: str, text: str) -> str:
     if not cards:
         return f"I couldn't find anything to quiz you on in {title}. Try adding a few key facts."
     n = db.add_cards(title, cards)
-    return f"Added {n} flashcard{'s' if n != 1 else ''} from {title}. Say 'quiz me' to start."
+    if not n:
+        return f"Those flashcards are already saved in {title}. Say 'quiz me' to start."
+    return f"Added {_n(n, 'flashcard')} from {title}. Say 'quiz me' to start."
 
 
 @mcp.tool()
@@ -135,7 +145,7 @@ def list_materials() -> dict:
     items = db.materials()
     if not items:
         return {"materials": [], "message": "You haven't added any study material yet."}
-    names = ", ".join(f"{m['title']} ({m['cards']} cards)" for m in items)
+    names = ", ".join(f"{m['title']} ({_n(m['cards'], 'card')})" for m in items)
     return {"materials": items, "message": f"Your topics: {names}."}
 
 
@@ -145,7 +155,7 @@ def delete_material(title: str) -> str:
     n = db.delete_material(title)
     if not n:
         return f"I couldn't find a topic called {title.strip() or 'that'}."
-    return f"Deleted {n} flashcard{'s' if n != 1 else ''} from {title.strip()}."
+    return f"Deleted {_n(n, 'flashcard')} from {title.strip()}."
 
 
 @mcp.tool()
@@ -164,7 +174,7 @@ def progress() -> dict:
     if not s["total"]:
         msg = "You don't have any flashcards yet. Tell me what you studied to get started."
     else:
-        msg = f"You have {s['total']} cards, {s['due_today']} due today, and {s['mastered']} mastered."
+        msg = f"You have {_n(s['total'], 'card')}, {s['due_today']} due today, and {s['mastered']} mastered."
     return {**s, "message": msg}
 
 

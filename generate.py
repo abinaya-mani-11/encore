@@ -1,12 +1,12 @@
-"""Turn study material into flashcards via Amazon Bedrock.
+"""Turn study material into flashcards with an LLM (Gemini by default, or Amazon Bedrock).
 
 OWNER: Mano (@Mkkumar2006)
 Contract (do not change without a PR + team agreement):
     make_cards(text: str) -> list[{"question": str, "answer": str}]
 
-Provider: LLM_PROVIDER=bedrock (default), gemini (see gemini.py), or none
+Provider: LLM_PROVIDER=gemini (default, see gemini.py), bedrock, or none
 (offline regex parser only, used by the tests).
-Bedrock model is read from the BEDROCK_MODEL_ID env var (required).
+Bedrock model is read from the BEDROCK_MODEL_ID env var.
 AWS credentials are picked up from the environment (AWS_ACCESS_KEY_ID,
 AWS_SECRET_ACCESS_KEY, AWS_REGION) or from any standard boto3 credential
 chain (instance profile, ~/.aws/credentials, etc.).
@@ -113,10 +113,10 @@ def _parse_json(raw: str) -> list[dict]:
 
 
 def _llm_cards(text: str, *, strict: bool = False) -> list[dict]:
-    """Ask Bedrock once, parse JSON, raise on failure."""
+    """Ask the model once, parse JSON, raise on failure."""
     tmpl = _STRICT_TMPL if strict else _USER_TMPL
     prompt = tmpl.format(text=text, min_cards=MIN_CARDS, max_cards=MAX_CARDS)
-    call = _call_gemini if os.environ.get("LLM_PROVIDER") == "gemini" else _call_bedrock
+    call = _call_bedrock if os.environ.get("LLM_PROVIDER") == "bedrock" else _call_gemini
     return _parse_json(call(prompt))
 
 
@@ -167,7 +167,7 @@ def _dedupe(cards: list[dict]) -> list[dict]:
 def make_cards(text: str) -> list[dict]:
     """Return [{\"question\": str, \"answer\": str}, ...].
 
-    Calls Amazon Bedrock (boto3 Converse). Handles:
+    Calls Gemini, or Amazon Bedrock with LLM_PROVIDER=bedrock. Handles:
     - Long inputs by chunking on paragraph boundaries.
     - Malformed JSON by retrying once with a stricter prompt.
     - Total failure by falling back to the regex parser.
@@ -184,9 +184,9 @@ def make_cards(text: str) -> list[dict]:
         try:
             cards = _llm_cards(chunk)
         except (json.JSONDecodeError, ValueError, KeyError) as exc:
-            logger.warning("Bedrock returned malformed JSON (%s); retrying…", exc)
+            logger.warning("Model returned malformed JSON (%s); retrying…", exc)
         except Exception as exc:  # noqa: BLE001
-            logger.error("Bedrock call failed (%s); using fallback.", exc)
+            logger.error("Model call failed (%s); using fallback.", exc)
             cards = _regex_fallback(chunk)
 
         # retry once with stricter prompt on bad JSON

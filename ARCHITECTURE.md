@@ -2,16 +2,17 @@
 
 Track: **Alexa+**. A self-hosted MCP server (Streamable HTTP, MCP spec 2025-11-25) plus a
 **simulated Alexa+ experience** in a web app as the demo client.
-Mini challenges: **AWS Builder** (Amazon Bedrock) and **Open Source** (MIT).
+Mini challenge: **Open Source** (MIT). Model: **Gemini** (free tier); an Amazon Bedrock path exists
+but was never run live, because our AWS account was not cleared for Bedrock.
 
 ```
  Browser (web/)                      web/app.py                       server.py (MCP)
- mic -> Web Speech STT --text-->  agent loop: Bedrock     --MCP-->   tools: add_material,
+ mic -> Web Speech STT --text-->  agent loop: Gemini      --MCP-->   tools: add_material,
  speaker <- Web Speech TTS <--   Converse + tool use      Streamable  next_card, grade_card,
  (text fallback)                   (acts as MCP client)     HTTP /mcp   progress, view_flashcards
                                                                         |              |
                                                                   generate.py       Apps extension
-                                                                  (Bedrock)        ui:// flashcards
+                                                                  (Gemini)         ui:// flashcards
                                                                                   db.py + srs.py
                                                                                   (SQLite, Leitner)
 ```
@@ -21,8 +22,8 @@ Mini challenges: **AWS Builder** (Amazon Bedrock) and **Open Source** (MIT).
 |---|---|---|
 | `server.py` | MCP server, tools, Streamable HTTP at `/mcp` | Jithesh |
 | `db.py`, `srs.py` | Persistent card state, spaced-repetition schedule | Jithesh |
-| `generate.py` | Notes -> flashcards via Amazon Bedrock | Mano |
-| `web/` | Alexa+ simulator: voice UI + Bedrock agent loop acting as MCP client | Bee |
+| `generate.py` | Notes -> flashcards via Gemini (`gemini.py`), optional Bedrock | Mano |
+| `web/` | Alexa+ simulator: voice UI + model agent loop acting as MCP client | Bee |
 
 ## Contracts (change only by PR + team agreement)
 - `generate.make_cards(text: str) -> list[{"question": str, "answer": str}]`
@@ -54,7 +55,7 @@ Mini challenges: **AWS Builder** (Amazon Bedrock) and **Open Source** (MIT).
 ## Why this should score
 - **Stateful across sessions** (SQLite + spaced repetition). The rules list "context-aware add-on that maintains state across sessions" as creative; a single-turn Q&A bot is listed as obvious.
 - A real MCP server over Streamable HTTP, called at runtime by an agent through an MCP client.
-- Bedrock used for both card generation and the agent, documented for AWS Builder.
+- One `LLM_PROVIDER` switch picks the model for both card generation and the agent (Gemini by default).
 - MCP App: `view_flashcards` binds its structured flashcard result to the interactive `ui://` resource.
 
 ## Out of scope
