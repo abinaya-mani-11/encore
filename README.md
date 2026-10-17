@@ -13,11 +13,10 @@ python -m venv .venv
 pip install -r requirements.txt
 copy .env.example .env           # macOS/Linux: cp; then fill in an LLM (below)
 ```
-Pick the model in `.env`:
-- **Amazon Bedrock** (default): `LLM_PROVIDER=bedrock`, AWS keys, and `BEDROCK_MODEL_ID`
-  (defaults to `amazon.nova-lite-v1:0`).
-- **Gemini**, if you have no AWS access: `LLM_PROVIDER=gemini` and `GEMINI_API_KEY`
-  (free key from [Google AI Studio](https://aistudio.google.com)).
+In `.env`, set `GEMINI_API_KEY` (a free key from [Google AI Studio](https://aistudio.google.com)).
+That's the only key needed. Encore also has an Amazon Bedrock path (`LLM_PROVIDER=bedrock`,
+AWS keys and `BEDROCK_MODEL_ID`), but we couldn't run it live: our new AWS account was never
+cleared for Bedrock (see `docs/FEEDBACK.md`), so it's covered only by mocked tests.
 
 Start both processes, each in its own terminal:
 ```bash
@@ -35,7 +34,7 @@ python -m unittest tests/test_generate.py    # card generation with a mocked Bed
 npm ci && npx playwright install chromium && npm run test:e2e   # browser voice flow
 ```
 No test calls a real model. `LLM_PROVIDER=none` also runs card generation offline
-(cards come from `question? answer` lines); the web agent still needs bedrock or gemini.
+(cards come from `question? answer` lines); the web agent still needs a model.
 
 The flashcard MCP App HTML is included in the repository. To rebuild it after
 changing `mcp_apps/flashcards.ts`, use Node.js 20+: `npm ci && npm run build:mcp-app`.
@@ -45,7 +44,8 @@ changing `mcp_apps/flashcards.ts`, use Node.js 20+: `npm ci && npm run build:mcp
 |---|---|
 | `server.py` | MCP server and tools |
 | `db.py`, `srs.py` | Card storage and spaced repetition |
-| `generate.py` | Notes to flashcards (Bedrock); chunking + retry |
+| `generate.py` | Notes to flashcards (Gemini, optional Bedrock); chunking + retry |
+| `gemini.py` | Minimal Gemini REST client (stdlib only) |
 | `ingest.py` | Extract text from PDF / VTT / SRT / plain-text files |
 | `web/` | Simulated Alexa+ voice client |
 | `mcp_apps/` | MCP Apps flashcard UI source and bundled resource |

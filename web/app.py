@@ -1,4 +1,4 @@
-"""Web host for Encore's Bedrock-backed Alexa+ simulator."""
+"""Web host for Encore's Alexa+ simulator (Gemini by default, or Amazon Bedrock)."""
 
 from __future__ import annotations
 
@@ -35,7 +35,7 @@ MCP_SERVER_URL = os.getenv(
     "MCP_SERVER_URL",
     f"http://127.0.0.1:{os.getenv('ENCORE_PORT', '8000')}/mcp",
 )
-LLM_PROVIDER = os.getenv("LLM_PROVIDER", "bedrock")  # or "gemini"
+LLM_PROVIDER = os.getenv("LLM_PROVIDER", "gemini")  # or "bedrock"
 BEDROCK_MODEL_ID = os.getenv("BEDROCK_MODEL_ID", "")
 BEDROCK_REGION = os.getenv("AWS_REGION", "us-east-1")
 MAX_TOOL_ROUNDS = 8
@@ -147,13 +147,13 @@ async def run_agent(
 
 
 async def _run_agent(messages: list[dict[str, Any]], bedrock_client: Any | None, mcp_server_url: str) -> str:
-    if LLM_PROVIDER == "gemini":
-        converse = _gemini_converse
-    else:
+    if LLM_PROVIDER == "bedrock":
         if not BEDROCK_MODEL_ID:
             raise RuntimeError("BEDROCK_MODEL_ID is not configured.")
         client = bedrock_client or boto3.client("bedrock-runtime", region_name=BEDROCK_REGION)
         converse = partial(client.converse, modelId=BEDROCK_MODEL_ID)
+    else:
+        converse = _gemini_converse
 
     async with streamable_http_client(mcp_server_url) as (read_stream, write_stream):
         async with ClientSession(read_stream, write_stream) as session:
@@ -181,11 +181,11 @@ async def _run_agent(messages: list[dict[str, Any]], bedrock_client: Any | None,
                 if response.get("stopReason") != "tool_use":
                     reply = _text_from_message(message)
                     if not reply:
-                        raise RuntimeError("Bedrock returned no reply text.")
+                        raise RuntimeError("The model returned no reply text.")
                     return reply
 
                 if not tool_uses:
-                    raise RuntimeError("Bedrock requested tools but returned no tool calls.")
+                    raise RuntimeError("The model requested tools but returned no tool calls.")
 
                 tool_results = []
                 for tool_use in tool_uses:
@@ -203,7 +203,7 @@ async def _run_agent(messages: list[dict[str, Any]], bedrock_client: Any | None,
 
                 messages.append({"role": "user", "content": tool_results})
 
-    raise AgentLoopLimitError(f"Bedrock requested tools more than {MAX_TOOL_ROUNDS} times.")
+    raise AgentLoopLimitError(f"The model requested tools more than {MAX_TOOL_ROUNDS} times.")
 
 
 async def _conversation(conversation_id: str | None) -> tuple[str, list[dict[str, Any]], asyncio.Lock]:
